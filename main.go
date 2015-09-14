@@ -30,7 +30,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/gammazero/gobogglesolver/solver"
+	"github.com/gammazero/bogglesolver/solver"
 	"os"
 	"strings"
 	"time"
