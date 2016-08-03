@@ -106,7 +106,7 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 	board := []rune(strings.ToLower(grid))
 	trie := s.root
 	words := make([]string, 0, 32)
-	q := queue.New(s.boardSize)
+	q := queue.New()
 	adj := make([]int, 0, 8)
 	sqAdj := adj
 	var adjCount int
@@ -115,8 +115,8 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 		seen = append(seen, initSq)
 		cstr := string(c)
 		qn := newQNode(initSq, cstr, trie.Child(c), seen)
-		q.Push(qn)
-		for !q.Empty() {
+		q.Add(qn)
+		for q.Length() > 0 {
 			qn = q.Pop().(*qNode)
 			parentSq := qn.parentSquare
 			prefix := qn.prefix
@@ -150,7 +150,7 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 				newSeen = append(newSeen, seen...)
 				newSeen = append(newSeen, curSq)
 				newNode := newQNode(curSq, cstr, curNode, newSeen)
-				q.Push(newNode)
+				q.Add(newNode)
 				if curNode.IsWord() {
 					if cstr[0] == 'q' {
 						// Rehydrate q-words with 'u'.

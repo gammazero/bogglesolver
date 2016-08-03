@@ -40,17 +40,17 @@ func (t *Trie) ContainsWord(word string) bool {
 	return t.isWord
 }
 
-// ContainsChar checks to see if the Trie contains the given letter.
+// ContainsChar checks to see if the Trie node contains the given letter.
 func (t *Trie) ContainsLetter(c rune) bool {
 	return t.Child(c) != nil
 }
 
-// GetChild returns the sub-Trie for the given character.
+// Child returns the sub-Trie for the given character.
 func (t *Trie) Child(c rune) *Trie {
 	return t.children[int(c-'a')]
 }
 
-// IsWord returns true if the Trie completes a word.
+// IsWord returns true if the given Trie node completes a word.
 func (t *Trie) IsWord() bool {
 	return t.isWord
 }
