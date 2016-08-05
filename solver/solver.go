@@ -117,7 +117,7 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 		qn := newQNode(initSq, cstr, trie.Child(c), seen)
 		q.Add(qn)
 		for q.Length() > 0 {
-			qn = q.Pop().(*qNode)
+			qn = q.Remove().(*qNode)
 			parentSq := qn.parentSquare
 			prefix := qn.prefix
 			parentTrie := qn.parentTrie
