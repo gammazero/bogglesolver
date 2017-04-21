@@ -128,17 +128,13 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 				sqAdj = s.adjacency[parentSq]
 			}
 			adjCount = len(sqAdj)
+		AdjLoop:
 			for a := 0; a < adjCount; a++ {
 				curSq := sqAdj[a]
-				hasCur := false
-				for _, x := range seen {
-					if x == curSq {
-						hasCur = true
-						break
+				for i := range seen {
+					if seen[i] == curSq {
+						continue AdjLoop
 					}
-				}
-				if hasCur {
-					continue
 				}
 				c = board[curSq]
 				curNode := parentTrie.Child(c)
