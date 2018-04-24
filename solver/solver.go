@@ -6,7 +6,7 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
-	"github.com/gammazero/queue"
+	"github.com/gammazero/deque"
 	"io"
 	"os"
 	"sort"
@@ -106,7 +106,7 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 	board := []rune(strings.ToLower(grid))
 	trie := s.root
 	words := make([]string, 0, 32)
-	q := queue.New()
+	var q deque.Deque
 	adj := make([]int, 0, 8)
 	sqAdj := adj
 	var adjCount int
@@ -115,9 +115,9 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 		seen = append(seen, initSq)
 		cstr := string(c)
 		qn := newQNode(initSq, cstr, trie.Child(c), seen)
-		q.Add(qn)
-		for q.Length() > 0 {
-			qn = q.Remove().(*qNode)
+		q.PushBack(qn)
+		for q.Len() > 0 {
+			qn = q.PopFront().(*qNode)
 			parentSq := qn.parentSquare
 			prefix := qn.prefix
 			parentTrie := qn.parentTrie
@@ -146,7 +146,7 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 				newSeen = append(newSeen, seen...)
 				newSeen = append(newSeen, curSq)
 				newNode := newQNode(curSq, cstr, curNode, newSeen)
-				q.Add(newNode)
+				q.PushBack(newNode)
 				if curNode.IsWord() {
 					if cstr[0] == 'q' {
 						// Rehydrate q-words with 'u'.
@@ -212,7 +212,7 @@ func loadWords(wordsFile string, maxLen, minLen int) (*Trie, int, error) {
 	if strings.HasSuffix(wordsFile, ".gz") {
 		rdr, err = gzip.NewReader(f)
 		if err != nil {
-			return nil, 0, fmt.Errorf("solver: error unzipping words file:", err)
+			return nil, 0, fmt.Errorf("solver: error unzipping words file: %s", err)
 		}
 	} else {
 		rdr = f
@@ -247,7 +247,7 @@ func loadWords(wordsFile string, maxLen, minLen int) (*Trie, int, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, 0, fmt.Errorf("solver: error reading words file:", err)
+		return nil, 0, fmt.Errorf("solver: error reading words file: %s", err)
 	}
 
 	return root, wordCount, nil
@@ -286,8 +286,8 @@ func calculateAdjacencyMatrix(xlim, ylim int) [][]int {
 
 // calculateAdjacency calculates squares adjacent to the one given.
 //
-// An array of adjacent squares, up to eight, in calculated for the square
-// specified by the x and y coordinates, and are written to the given slice.
+// Adjacent squares, up to eight, are calculated for the square specified by
+// the x and y coordinates, and are written to the given slice.
 func calculateAdjacency(xlim, ylim, sq int, adj []int) []int {
 	// Current cell index = y * xlim + x
 	y := sq / xlim
