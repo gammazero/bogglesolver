@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"github.com/gammazero/bogglesolver/solver"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -100,6 +101,7 @@ func runBoard(wordsFile string, xlen, ylen, quietLevel int, bench, preComp bool)
 
 // showWords prints words in four columns.
 func showWords(words []string) {
+	sort.Slice(words, func(i, j int) bool { return len(words[i]) > len(words[j]) })
 	for i, w := range words {
 		if i%4 == 0 {
 			fmt.Println("")
