@@ -6,7 +6,7 @@ import (
 
 type Trie struct {
 	isWord   bool
-	children [26]*Trie
+	children map[rune]*Trie
 }
 
 func NewTrie() *Trie {
@@ -15,14 +15,15 @@ func NewTrie() *Trie {
 
 // Insert stores a word in the Trie.
 func (t *Trie) Insert(word string) {
-	var index int
 	var next *Trie
 	for _, c := range strings.ToLower(word) {
-		index = int(c - 'a')
-		next = t.children[index]
+		next = t.children[c]
 		if next == nil {
 			next = new(Trie)
-			t.children[index] = next
+			if t.children == nil {
+				t.children = map[rune]*Trie{}
+			}
+			t.children[c] = next
 		}
 		t = next
 	}
@@ -32,7 +33,7 @@ func (t *Trie) Insert(word string) {
 // Contains checks to see if the Trie contains the given word.
 func (t *Trie) ContainsWord(word string) bool {
 	for _, c := range strings.ToLower(word) {
-		t = t.children[int(c-'a')]
+		t = t.children[c]
 		if t == nil {
 			return false
 		}
@@ -47,7 +48,7 @@ func (t *Trie) ContainsLetter(c rune) bool {
 
 // Child returns the sub-Trie for the given character.
 func (t *Trie) Child(c rune) *Trie {
-	return t.children[int(c-'a')]
+	return t.children[c]
 }
 
 // IsWord returns true if the given Trie node completes a word.
