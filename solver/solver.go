@@ -6,11 +6,12 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
-	"github.com/gammazero/deque"
 	"io"
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/gammazero/deque"
 )
 
 // qNode is a element of the queue constructed while searching word paths.
@@ -106,7 +107,7 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 	board := []rune(strings.ToLower(grid))
 	trie := s.root
 	words := make([]string, 0, 32)
-	var q deque.Deque
+	var q deque.Deque[*qNode]
 	adj := make([]int, 0, 8)
 	sqAdj := adj
 	var adjCount int
@@ -117,7 +118,7 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 		qn := newQNode(initSq, cstr, trie.Child(c), seen)
 		q.PushBack(qn)
 		for q.Len() > 0 {
-			qn = q.PopFront().(*qNode)
+			qn = q.PopFront()
 			parentSq := qn.parentSquare
 			prefix := qn.prefix
 			parentTrie := qn.parentTrie
@@ -142,9 +143,10 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 					continue
 				}
 				cstr = prefix + string(c)
-				newSeen := make([]int, 0, len(seen)+1)
-				newSeen = append(newSeen, seen...)
-				newSeen = append(newSeen, curSq)
+				newSeen := make([]int, len(seen)+1)
+				copy(newSeen, seen)
+				newSeen[len(seen)] = curSq
+
 				newNode := newQNode(curSq, cstr, curNode, newSeen)
 				q.PushBack(newNode)
 				if curNode.IsWord() {
