@@ -22,7 +22,6 @@ For example: "qadfetriihkriflv" represents the 4x4 grid:
 This grid has 62 unique solutions using the default dictionary.
 
 Display help to see usage infomation: boggle --help
-
 */
 package main
 
@@ -30,11 +29,12 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/gammazero/bogglesolver/solver"
 	"os"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/gammazero/bogglesolver/solver"
 )
 
 const (

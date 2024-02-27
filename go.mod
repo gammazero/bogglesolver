@@ -1,5 +1,5 @@
 module github.com/gammazero/bogglesolver
 
-go 1.18
+go 1.21
 
-require github.com/gammazero/deque v0.2.0
+require github.com/gammazero/deque v0.2.1

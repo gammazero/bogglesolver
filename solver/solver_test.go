@@ -235,8 +235,8 @@ func genGrid(boardSize int) string {
 }
 
 func BenchmarkSolver(b *testing.B) {
-	xlen := 10
-	ylen := 10
+	const xlen = 10
+	const ylen = 10
 	s, _ := NewSolver(xlen, ylen, wordsFile, false)
 	grid := genGrid(s.BoardSize())
 
@@ -247,8 +247,8 @@ func BenchmarkSolver(b *testing.B) {
 }
 
 func BenchmarkSolverPrecomp(b *testing.B) {
-	xlen := 10
-	ylen := 10
+	const xlen = 10
+	const ylen = 10
 	s, _ := NewSolver(xlen, ylen, wordsFile, true)
 	grid := genGrid(s.BoardSize())
 
