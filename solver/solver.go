@@ -12,18 +12,16 @@ import (
 	"strings"
 
 	"github.com/gammazero/deque"
+	"github.com/gammazero/radixtree"
 )
+
+var adj = make([]int, 0, 8)
 
 // qNode is a element of the queue constructed while searching word paths.
 type qNode struct {
 	parentSquare int
-	prefix       string
-	parentTrie   *Trie
+	parentTrie   *radixtree.Stepper
 	seen         []int
-}
-
-func newQNode(parentSquare int, prefix string, parentTrie *Trie, seen []int) *qNode {
-	return &qNode{parentSquare, prefix, parentTrie, seen}
 }
 
 // Solver implements the algorithm to find words in the Boggle grid.
@@ -32,14 +30,13 @@ func newQNode(parentSquare int, prefix string, parentTrie *Trie, seen []int) *qN
 // words.  When an instance of Solver is created, it sets up an internal
 // dictionary to look up valid boggle answers.  The Solve() method can be used
 // repeatedly to generate solutions for different boggle grids.
-type BoggleSolver struct {
-	rows, cols, boardSize int
-	root                  *Trie
-	wordCount             int
-	adjacency             [][]int
+type Solver struct {
+	cols int
+	rows int
+	rt   *radixtree.Tree
 }
 
-// NewSolver creates and initializes a Solver instance.
+// New creates and initializes a Solver instance.
 //
 // This creates the internal trie for fast word lookup letter-by-letter.  Words
 // that begin with capital letters and words that are not within the specified
@@ -51,41 +48,36 @@ type BoggleSolver struct {
 //
 // The maximum word length is the size of the board, and the minimum word
 // length is 3 letters.
-func NewSolver(xlen, ylen int, wordsFile string, preCalcAdjacency bool) (*BoggleSolver, error) {
+func New(xlen, ylen int, wordsFile string) (Solver, error) {
 	if xlen < 1 || ylen < 1 {
-		return nil, errors.New("invalid board dimensions")
+		return Solver{}, errors.New("invalid board dimensions")
 	}
 
-	rt, wc, err := loadWords(wordsFile, xlen*ylen, 3)
+	rt, err := loadWords(wordsFile, xlen*ylen, 3)
 	if err != nil {
-		return nil, err
+		return Solver{}, err
 	}
 
-	solver := BoggleSolver{
-		cols:      xlen,
-		rows:      ylen,
-		boardSize: xlen * ylen,
-		root:      rt,
-		wordCount: wc}
-	if preCalcAdjacency {
-		solver.adjacency = calculateAdjacencyMatrix(xlen, ylen)
-	}
-	return &solver, nil
+	return Solver{
+		cols: xlen,
+		rows: ylen,
+		rt:   rt,
+	}, nil
 }
 
 // BoardSize return the size of the board (x * y).
-func (s *BoggleSolver) BoardSize() int {
-	return s.boardSize
+func (s Solver) BoardSize() int {
+	return s.cols * s.rows
 }
 
 // Dimensions returns the number of columns (x-size) and rows (y-size).
-func (s *BoggleSolver) Dimensions() (int, int) {
+func (s Solver) Dimensions() (int, int) {
 	return s.cols, s.rows
 }
 
 // WordCount returns the number of words read from the words file.
-func (s *BoggleSolver) WordCount() int {
-	return s.wordCount
+func (s Solver) WordCount() int {
+	return s.rt.Len()
 }
 
 // Solve generates all solutions for the given Boggle grid.
@@ -93,68 +85,63 @@ func (s *BoggleSolver) WordCount() int {
 // The grid argument is a string of X*Y characters, representing the letters in
 // a Boggle grid, from top left to bottom right.  This method returns a slice
 // of the words that were found in the grid.
-func (s *BoggleSolver) Solve(grid string) ([]string, error) {
-	if s.root == nil {
+func (s Solver) Solve(grid string) ([]string, error) {
+	if s.rt == nil {
 		return nil, errors.New("failed to read words file")
 	}
-	if len(grid) != s.boardSize {
-		if len(grid) < s.boardSize {
+	if len(grid) != s.BoardSize() {
+		if len(grid) < s.BoardSize() {
 			return nil, errors.New("not enough letters for board")
 		}
 		return nil, errors.New("too many letters for board")
 	}
 
-	board := []rune(strings.ToLower(grid))
-	trie := s.root
-	words := make([]string, 0, 32)
-	var q deque.Deque[*qNode]
-	adj := make([]int, 0, 8)
-	sqAdj := adj
-	var adjCount int
-	for initSq, c := range board {
-		seen := make([]int, 0, 8)
-		seen = append(seen, initSq)
-		cstr := string(c)
-		qn := newQNode(initSq, cstr, trie.Child(c), seen)
-		q.PushBack(qn)
-		for q.Len() > 0 {
-			qn = q.PopFront()
+	board := strings.ToLower(grid)
+	words := make([]string, 0, 256)
+	q := deque.New[qNode](s.BoardSize(), s.BoardSize())
+	for initSq := 0; initSq < len(board); initSq++ {
+		seen := make([]int, 1, 8)
+		seen[0] = initSq
+		stepper := s.rt.NewStepper()
+		stepper.Next(board[initSq])
+		q.PushBack(qNode{
+			parentSquare: initSq,
+			parentTrie:   stepper,
+			seen:         seen,
+		})
+		for q.Len() != 0 {
+			qn := q.PopFront()
 			parentSq := qn.parentSquare
-			prefix := qn.prefix
 			parentTrie := qn.parentTrie
 			seen = qn.seen
-			if s.adjacency == nil {
-				sqAdj = calculateAdjacency(s.cols, s.rows, parentSq, adj)
-			} else {
-				sqAdj = s.adjacency[parentSq]
-			}
-			adjCount = len(sqAdj)
+			sqAdj := calculateAdjacency(s.cols, s.rows, parentSq)
 		AdjLoop:
-			for a := 0; a < adjCount; a++ {
-				curSq := sqAdj[a]
+			for _, curSq := range sqAdj {
 				for i := range seen {
 					if seen[i] == curSq {
 						continue AdjLoop
 					}
 				}
-				c = board[curSq]
-				curNode := parentTrie.Child(c)
-				if curNode == nil {
+				curNode := parentTrie.Copy()
+				if !curNode.Next(board[curSq]) {
 					continue
 				}
-				cstr = prefix + string(c)
 				newSeen := make([]int, len(seen)+1)
 				copy(newSeen, seen)
 				newSeen[len(seen)] = curSq
 
-				newNode := newQNode(curSq, cstr, curNode, newSeen)
-				q.PushBack(newNode)
-				if curNode.IsWord() {
-					if cstr[0] == 'q' {
+				q.PushBack(qNode{
+					parentSquare: curSq,
+					parentTrie:   curNode,
+					seen:         newSeen,
+				})
+				if item := curNode.Item(); item != nil {
+					key := item.Key()
+					if key[0] == 'q' {
 						// Rehydrate q-words with 'u'.
-						words = append(words, "qu"+cstr[1:])
+						words = append(words, "qu"+key[1:])
 					} else {
-						words = append(words, cstr)
+						words = append(words, key)
 					}
 				}
 			}
@@ -164,11 +151,13 @@ func (s *BoggleSolver) Solve(grid string) ([]string, error) {
 	return uniqueSortedWords(words), nil
 }
 
-// GridString returns a printable string version of a X by Y boggle grid.
+// Gridreturns a printable string version of a X by Y boggle grid.
 //
 // The grid is given as a string of X*Y characters representing the letters in
 // a boggle grid, from top left to bottom right.
-func GridString(grid string, cols, rows int) string {
+func (s Solver) Grid(grid string) string {
+	cols := s.cols
+	rows := s.rows
 	if len(grid) != cols*rows {
 		panic("number of letters in grid must equal cols * rows")
 	}
@@ -203,10 +192,10 @@ func GridString(grid string, cols, rows int) string {
 }
 
 // loadWords reads a file of words and creates a trie containing them.
-func loadWords(wordsFile string, maxLen, minLen int) (*Trie, int, error) {
+func loadWords(wordsFile string, maxLen, minLen int) (*radixtree.Tree, error) {
 	f, err := os.Open(wordsFile)
 	if err != nil {
-		return nil, 0, fmt.Errorf("solver: error opening words file: %s", err)
+		return nil, fmt.Errorf("solver: error opening words file: %s", err)
 	}
 	defer f.Close()
 
@@ -214,14 +203,13 @@ func loadWords(wordsFile string, maxLen, minLen int) (*Trie, int, error) {
 	if strings.HasSuffix(wordsFile, ".gz") {
 		rdr, err = gzip.NewReader(f)
 		if err != nil {
-			return nil, 0, fmt.Errorf("solver: error unzipping words file: %s", err)
+			return nil, fmt.Errorf("solver: error unzipping words file: %s", err)
 		}
 	} else {
 		rdr = f
 	}
 	scanner := bufio.NewScanner(rdr)
-	root := NewTrie()
-	wordCount := 0
+	tree := radixtree.New()
 	var word string
 
 	// Scan through line-dilimited words.
@@ -244,15 +232,14 @@ func loadWords(wordsFile string, maxLen, minLen int) (*Trie, int, error) {
 			word = "q" + word[2:]
 		}
 
-		root.Insert(word)
-		wordCount++
+		tree.Put(word, nil)
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, 0, fmt.Errorf("solver: error reading words file: %s", err)
+		return nil, fmt.Errorf("solver: error reading words file: %s", err)
 	}
 
-	return root, wordCount, nil
+	return tree, nil
 }
 
 func uniqueSortedWords(words []string) []string {
@@ -271,33 +258,18 @@ func uniqueSortedWords(words []string) []string {
 	return unique
 }
 
-// caculateAdjacency creates the adjacency matrix for any board dimensions.
-//
-// An array of adjacent squares, up to eight, is calculated for each square on
-// the board.  The dimensions are given by the xlim and ylim parameters.
-func calculateAdjacencyMatrix(xlim, ylim int) [][]int {
-	// adjList is an array of slices of int.
-	adjList := make([][]int, ylim*xlim)
-	for sq := 0; sq < xlim*ylim; sq++ {
-		// adj holds adjacent squares, up to 8.
-		// Store a slice adjacent squares, for each square in board.
-		adjList[sq] = calculateAdjacency(xlim, ylim, sq, make([]int, 0, 8))
-	}
-	return adjList
-}
-
 // calculateAdjacency calculates squares adjacent to the one given.
 //
 // Adjacent squares, up to eight, are calculated for the square specified by
 // the x and y coordinates, and are written to the given slice.
-func calculateAdjacency(xlim, ylim, sq int, adj []int) []int {
+func calculateAdjacency(xlim, ylim, sq int) []int {
 	// Current cell index = y * xlim + x
 	y := sq / xlim
 	x := sq - (y * xlim)
 	var above, below int
 
 	// Clear the adj slice.
-	adj = adj[0:0]
+	adj = adj[:0]
 
 	// Look at row above current cell.
 	if y-1 >= 0 {

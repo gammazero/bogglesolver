@@ -10,48 +10,46 @@ const (
 )
 
 func TestLoadWords(t *testing.T) {
-	rt, wc, err := loadWords("_not_here_", 16, 3)
+	rt, err := loadWords("_not_here_", 16, 3)
 	if err == nil {
 		t.Fatal("failed to catch bad file")
 	}
 
-	rt, wc, err = loadWords(wordsFile, 16, 3)
+	rt, err = loadWords(wordsFile, 16, 3)
 	if rt == nil {
 		t.Fatal("expected trie")
 	}
-	if wc < 1 {
+	if rt.Len() < 1 {
 		t.Fatal("expected more words")
 	}
-	fmt.Println("Loaded", wc, "words from", wordsFile)
+	fmt.Println("Loaded", rt.Len(), "words from", wordsFile)
 }
 
 func TestCalcAdjacency(t *testing.T) {
-	adj := make([]int, 0, 8)
-
 	// Test corners
 	sq := 0
-	adj = calculateAdjacency(4, 4, sq, adj)
+	adj = calculateAdjacency(4, 4, sq)
 	//fmt.Println("adj:", adj)
 	if len(adj) != 3 || adj[0] != 1 || adj[1] != 4 || adj[2] != 5 {
 		t.Error("wrong adjacency for square", sq)
 	}
 
 	sq = 3
-	adj = calculateAdjacency(4, 4, sq, adj)
+	adj = calculateAdjacency(4, 4, sq)
 	//fmt.Println("adj:", adj)
 	if len(adj) != 3 || adj[0] != 2 || adj[1] != 6 || adj[2] != 7 {
 		t.Error("wrong adjacency for square", sq)
 	}
 
 	sq = 12
-	adj = calculateAdjacency(4, 4, sq, adj)
+	adj = calculateAdjacency(4, 4, sq)
 	//fmt.Println("adj:", adj)
 	if len(adj) != 3 || adj[0] != 8 || adj[1] != 9 || adj[2] != 13 {
 		t.Error("wrong adjacency for square", sq)
 	}
 
 	sq = 15
-	adj = calculateAdjacency(4, 4, sq, adj)
+	adj = calculateAdjacency(4, 4, sq)
 	//fmt.Println("adj:", adj)
 	if len(adj) != 3 || adj[0] != 10 || adj[1] != 11 || adj[2] != 14 {
 		t.Error("wrong adjacency for square", sq)
@@ -59,7 +57,7 @@ func TestCalcAdjacency(t *testing.T) {
 
 	// Test edge
 	sq = 1
-	adj = calculateAdjacency(4, 4, sq, adj)
+	adj = calculateAdjacency(4, 4, sq)
 	//fmt.Println("adj:", adj)
 	if len(adj) != 5 || adj[0] != 0 || adj[1] != 2 || adj[2] != 4 || adj[3] != 5 || adj[4] != 6 {
 		t.Error("wrong adjacency for square", sq)
@@ -67,64 +65,12 @@ func TestCalcAdjacency(t *testing.T) {
 
 	// Test center
 	sq = 5
-	adj = calculateAdjacency(4, 4, sq, adj)
+	adj = calculateAdjacency(4, 4, sq)
 	//fmt.Println("adj:", adj)
 	if len(adj) != 8 || adj[0] != 0 || adj[1] != 1 || adj[2] != 2 || adj[3] != 4 || adj[4] != 6 || adj[5] != 8 || adj[6] != 9 || adj[7] != 10 {
 		t.Error("wrong adjacency for square", sq)
 	}
 
-}
-
-func TestCalcAdjacencyMatrix(t *testing.T) {
-	adjList := calculateAdjacencyMatrix(4, 4)
-	if len(adjList) != 16 {
-		t.Fatal("wrong size for adjacency matrix")
-	}
-
-	// Test corners
-	sq := 0
-	adj := adjList[sq]
-	//fmt.Println("adj:", adj)
-	if len(adj) != 3 || adj[0] != 1 || adj[1] != 4 || adj[2] != 5 {
-		t.Error("wrong adjacency for square", sq)
-	}
-
-	sq = 3
-	adj = adjList[sq]
-	//fmt.Println("adj:", adj)
-	if len(adj) != 3 || adj[0] != 2 || adj[1] != 6 || adj[2] != 7 {
-		t.Error("wrong adjacency for square", sq)
-	}
-
-	sq = 12
-	adj = adjList[sq]
-	//fmt.Println("adj:", adj)
-	if len(adj) != 3 || adj[0] != 8 || adj[1] != 9 || adj[2] != 13 {
-		t.Error("wrong adjacency for square", sq)
-	}
-
-	sq = 15
-	adj = adjList[sq]
-	//fmt.Println("adj:", adj)
-	if len(adj) != 3 || adj[0] != 10 || adj[1] != 11 || adj[2] != 14 {
-		t.Error("wrong adjacency for square", sq)
-	}
-
-	// Test edge
-	sq = 1
-	adj = adjList[sq]
-	//fmt.Println("adj:", adj)
-	if len(adj) != 5 || adj[0] != 0 || adj[1] != 2 || adj[2] != 4 || adj[3] != 5 || adj[4] != 6 {
-		t.Error("wrong adjacency for square", sq)
-	}
-
-	// Test center
-	sq = 5
-	adj = adjList[sq]
-	//fmt.Println("adj:", adj)
-	if len(adj) != 8 || adj[0] != 0 || adj[1] != 1 || adj[2] != 2 || adj[3] != 4 || adj[4] != 6 || adj[5] != 8 || adj[6] != 9 || adj[7] != 10 {
-		t.Error("wrong adjacency for square", sq)
-	}
 }
 
 func TestUniqueSortedWords(t *testing.T) {
@@ -142,18 +88,18 @@ func TestUniqueSortedWords(t *testing.T) {
 }
 
 func TestSolverBadNew(t *testing.T) {
-	s, err := NewSolver(4, 5, "_not_here_", false)
-	if s != nil || err == nil {
+	_, err := New(4, 5, "_not_here_")
+	if err == nil {
 		t.Fatal("failed to catch bad file")
 	}
 
-	s, err = NewSolver(-4, 5, wordsFile, false)
-	if s != nil || err == nil {
+	_, err = New(-4, 5, wordsFile)
+	if err == nil {
 		t.Fatal("failed to catch negative dimension")
 	}
 
-	s, err = NewSolver(4, 0, wordsFile, false)
-	if s != nil || err == nil {
+	_, err = New(4, 0, wordsFile)
+	if err == nil {
 		t.Fatal("failed to catch zero dimension")
 	}
 }
@@ -173,7 +119,7 @@ func TestGridString(t *testing.T) {
 }
 
 func TestSolver(t *testing.T) {
-	s, err := NewSolver(4, 5, wordsFile, false)
+	s, err := New(4, 5, wordsFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +137,6 @@ func TestSolver(t *testing.T) {
 		t.Fatal("expected more words")
 	}
 
-	fmt.Println("Adjacency matrix len:", len(s.adjacency))
 	grid := "qadfetriihkriflv"
 	words, err := s.Solve(grid)
 	if err == nil {
@@ -235,9 +180,9 @@ func genGrid(boardSize int) string {
 }
 
 func BenchmarkSolver(b *testing.B) {
-	const xlen = 10
-	const ylen = 10
-	s, _ := NewSolver(xlen, ylen, wordsFile, false)
+	const xlen = 50
+	const ylen = 50
+	s, _ := New(xlen, ylen, wordsFile)
 	grid := genGrid(s.BoardSize())
 
 	b.ResetTimer()
@@ -247,9 +192,9 @@ func BenchmarkSolver(b *testing.B) {
 }
 
 func BenchmarkSolverPrecomp(b *testing.B) {
-	const xlen = 10
-	const ylen = 10
-	s, _ := NewSolver(xlen, ylen, wordsFile, true)
+	const xlen = 50
+	const ylen = 50
+	s, _ := New(xlen, ylen, wordsFile)
 	grid := genGrid(s.BoardSize())
 
 	b.ResetTimer()

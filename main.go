@@ -42,8 +42,8 @@ const (
 )
 
 // runBoard loops getting grid data and finding solutions for that grid.
-func runBoard(wordsFile string, xlen, ylen, quietLevel int, bench, preComp bool) {
-	sol, err := solver.NewSolver(xlen, ylen, wordsFile, preComp)
+func runBoard(wordsFile string, xlen, ylen, quietLevel int, bench bool) {
+	sol, err := solver.New(xlen, ylen, wordsFile)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -83,12 +83,11 @@ func runBoard(wordsFile string, xlen, ylen, quietLevel int, bench, preComp bool)
 			continue
 		}
 
-		fmt.Printf("\nFound %d solutions for %dx%d grid in %s\n",
-			len(words), xlen, ylen, elapsed)
+		fmt.Printf("\nFound %d solutions for %dx%d grid in %s\n", len(words), xlen, ylen, elapsed)
 
 		if quietLevel < 2 {
 			if quietLevel < 1 {
-				fmt.Print(solver.GridString(grid, xlen, ylen))
+				fmt.Print(sol.Grid(grid))
 			}
 			showWords(words)
 		}
@@ -101,6 +100,7 @@ func runBoard(wordsFile string, xlen, ylen, quietLevel int, bench, preComp bool)
 
 // showWords prints words in four columns.
 func showWords(words []string) {
+	// Sort words by lenght.
 	sort.Slice(words, func(i, j int) bool { return len(words[i]) > len(words[j]) })
 	for i, w := range words {
 		if i%4 == 0 {
@@ -156,7 +156,6 @@ func main() {
 	var xLen = flag.Int("x", 4, "width (X-length) of board")
 	var yLen = flag.Int("y", 4, "height (Y-length) of board")
 	var bench = flag.Bool("b", false, "run benchmark test")
-	var preComp = flag.Bool("p", false, "pre-compute adjacency matrix")
 	var quiet = flag.Bool("q", false, "do not display grid")
 	var veryQuiet = flag.Bool("qq", false, "do not display grid or solutions")
 	var words = flag.String("words", defaultWords,
@@ -168,7 +167,6 @@ func main() {
 	fmt.Println("grid:", *grid)
 	fmt.Println("words file:", *words)
 	fmt.Println("bench:", *bench)
-	fmt.Println("preComp:", *preComp)
 	fmt.Println("quiet:", *quiet)
 	fmt.Println("veryQuiet:", *veryQuiet)
 
@@ -179,6 +177,6 @@ func main() {
 		quietLevel = 1
 	}
 
-	runBoard(*words, *xLen, *yLen, quietLevel, *bench, *preComp)
+	runBoard(*words, *xLen, *yLen, quietLevel, *bench)
 
 }
