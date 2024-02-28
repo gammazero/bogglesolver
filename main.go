@@ -17,29 +17,24 @@ import (
 
 func main() {
 	var grid string
-	xLen := flag.Int("x", 4, "width (X-length) of board")
-	yLen := flag.Int("y", 4, "height (Y-length) of board")
-	flag.StringVar(&grid, "grid", "", "populate grid with these characters (X*Y length) and exit")
-	random := flag.Bool("rand", false, "populate grid with randomly generated characters and exit")
-	quiet := flag.Bool("q", false, "do not display grid")
-	veryQuiet := flag.Bool("qq", false, "do not display grid or solutions")
+	xLen := flag.Int("x", 4, "width of board")
+	yLen := flag.Int("y", 4, "height of board")
+	flag.StringVar(&grid, "grid", "", "populate grid with these characters (X*Y length), solve, and exit")
+	random := flag.Bool("rand", false, "populate grid with randomly generated characters, solve, and exit")
+	quiet := flag.Bool("q", false, "do not display grid in output")
+	veryQuiet := flag.Bool("qq", false, "do not display grid or solutions in output")
 	words := flag.String("words", "", "optional file containing valid words separated by newline")
 	flag.Parse()
-
-	fmt.Printf("board size (X=%d Y=%d): %d\n", *xLen, *yLen, *xLen**yLen)
-	if grid != "" {
-		fmt.Println("grid:", grid)
-	}
-	fmt.Println("rand:", *random)
-	fmt.Println("quiet:", *quiet)
-	fmt.Println("veryQuiet:", *veryQuiet)
-	fmt.Println("words file:", *words)
 
 	var quietLevel int
 	if *veryQuiet {
 		quietLevel = 2
 	} else if *quiet {
 		quietLevel = 1
+	}
+
+	if *words != "" && quietLevel == 0 {
+		fmt.Println("loading words from", *words)
 	}
 
 	err := runBoard(grid, *words, *xLen, *yLen, quietLevel, *random)
@@ -84,8 +79,7 @@ func runBoard(grid, wordsFile string, xlen, ylen, quietLevel int, random bool) e
 			continue
 		}
 
-		fmt.Printf("\nFound %d solutions for %dx%d grid in %s\n", len(words), xlen, ylen, elapsed)
-
+		fmt.Printf("Found %d solutions for %dx%d grid in %s\n", len(words), xlen, ylen, elapsed)
 		if quietLevel < 2 {
 			if quietLevel < 1 {
 				fmt.Print(sol.Grid(grid))
