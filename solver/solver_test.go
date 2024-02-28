@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const wordsFile = "boggle_dict.txt.gz"
+const testWordsFile = "boggle_words.txt.gz"
 
 func TestLoadWords(t *testing.T) {
 	rt, err := loadWords("_not_here_", 16, 3)
@@ -31,7 +31,7 @@ func TestLoadWords(t *testing.T) {
 	if rt.Len() < 1 {
 		t.Fatal("expected more words")
 	}
-	fmt.Println("Loaded", rt.Len(), "words from", wordsFile)
+	fmt.Println("Loaded", rt.Len(), "words from", testWordsFile)
 }
 
 func TestCalcAdjacency(t *testing.T) {

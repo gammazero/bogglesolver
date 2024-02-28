@@ -15,10 +15,10 @@ import (
 	"github.com/gammazero/radixtree"
 )
 
-const defaultWords = "boggle_dict.txt.gz"
+const defaultWords = "boggle_words.txt.gz"
 
-//go:embed boggle_dict.txt.gz
-var dictFile embed.FS
+//go:embed boggle_words.txt.gz
+var wordsFile embed.FS
 
 var adj = make([]int, 0, 8)
 
@@ -31,9 +31,9 @@ type qNode struct {
 
 // Solver implements the algorithm to find words in the Boggle grid.
 //
-// Solver uses an a dictionary to lookup acceptable boggle words as all paths
-// through a boggle grid are followed. The Solve() method can be used
-// repeatedly to generate solutions for different boggle grids.
+// Solver searches all paths through a boggle grid, searching for words that
+// occur in a given list of acceptable boggle words. The Solve() method can be
+// used repeatedly to generate solutions for different boggle grids.
 type Solver struct {
 	cols int
 	rows int
@@ -47,17 +47,17 @@ type Solver struct {
 // length limits are filtered out.
 //
 // New takes the board dimensions xlen and ylen, a an optional file which can
-// be gz compressed. If no file is specified, then the embedded dictionary is
+// be gz compressed. If no file is specified, then the embedded words list is
 // used.
 //
 // The maximum word length is the size of the board, and the minimum word
 // length is 3 letters.
-func New(xlen, ylen int, wordsFile string) (Solver, error) {
+func New(xlen, ylen int, wordsPath string) (Solver, error) {
 	if xlen < 1 || ylen < 1 {
 		return Solver{}, errors.New("invalid board dimensions")
 	}
 
-	rt, err := loadWords(wordsFile, xlen*ylen, 3)
+	rt, err := loadWords(wordsPath, xlen*ylen, 3)
 	if err != nil {
 		return Solver{}, err
 	}
@@ -198,12 +198,12 @@ func GridString(grid string, cols, rows int) string {
 }
 
 // loadWords reads a file of words and creates a trie containing them. If no
-// file name is specified then the embedded dictionary is loaded.
-func loadWords(wordsFile string, maxLen, minLen int) (*radixtree.Tree, error) {
+// file name is specified then the embedded words list is loaded.
+func loadWords(filePath string, maxLen, minLen int) (*radixtree.Tree, error) {
 	var rdr io.Reader
 	var gz bool
-	if wordsFile == "" {
-		f, err := dictFile.Open(defaultWords)
+	if filePath == "" {
+		f, err := wordsFile.Open(defaultWords)
 		if err != nil {
 			return nil, fmt.Errorf("solver: error opening words file: %s", err)
 		}
@@ -211,13 +211,13 @@ func loadWords(wordsFile string, maxLen, minLen int) (*radixtree.Tree, error) {
 		rdr = f
 		gz = true
 	} else {
-		f, err := os.Open(wordsFile)
+		f, err := os.Open(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("solver: error opening words file: %s", err)
 		}
 		defer f.Close()
 		rdr = f
-		gz = strings.HasSuffix(wordsFile, ".gz")
+		gz = strings.HasSuffix(filePath, ".gz")
 	}
 	if gz {
 		var err error
