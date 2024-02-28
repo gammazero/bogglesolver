@@ -1,34 +1,12 @@
-/*
-Find words in X by Y boggle grids and display results interactively.
-
-This script uses the solver module to generate solutions to the boggle grids
-entered by a user.  The solver's internal dictionary is created once when the
-object is initialized.  It is then reused for subsequent solution searches.
-
-The user is prompted to input a string of x*y characters, representing the
-letters in a X by Y Boggle grid.  Use the letter 'q' to represent "qu".
-
-For example: "qadfetriihkriflv" represents the 4x4 grid:
-+---+---+---+---+
-| Qu| A | D | F |
-+---+---+---+---+
-| E | T | R | I |
-+---+---+---+---+
-| I | H | K | R |
-+---+---+---+---+
-| I | F | L | V |
-+---+---+---+---+
-
-This grid has 62 unique solutions using the default dictionary.
-
-Display help to see usage infomation: boggle --help
-*/
+// Interactive command-line application to solve Boggle grids of any size.
 package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"sort"
 	"strings"
@@ -37,45 +15,68 @@ import (
 	"github.com/gammazero/bogglesolver/solver"
 )
 
-const (
-	defaultWords = "boggle_dict.txt.gz"
-)
+func main() {
+	var grid string
+	xLen := flag.Int("x", 4, "width (X-length) of board")
+	yLen := flag.Int("y", 4, "height (Y-length) of board")
+	flag.StringVar(&grid, "grid", "", "populate grid with these characters (X*Y length) and exit")
+	random := flag.Bool("rand", false, "populate grid with randomly generated characters and exit")
+	quiet := flag.Bool("q", false, "do not display grid")
+	veryQuiet := flag.Bool("qq", false, "do not display grid or solutions")
+	words := flag.String("words", "", "optional file containing valid words separated by newline")
+	flag.Parse()
 
-// runBoard loops getting grid data and finding solutions for that grid.
-func runBoard(wordsFile string, xlen, ylen, quietLevel int, bench bool) {
-	sol, err := solver.New(xlen, ylen, wordsFile)
+	fmt.Printf("board size (X=%d Y=%d): %d\n", *xLen, *yLen, *xLen**yLen)
+	if grid != "" {
+		fmt.Println("grid:", grid)
+	}
+	fmt.Println("rand:", *random)
+	fmt.Println("quiet:", *quiet)
+	fmt.Println("veryQuiet:", *veryQuiet)
+	fmt.Println("words file:", *words)
+
+	var quietLevel int
+	if *veryQuiet {
+		quietLevel = 2
+	} else if *quiet {
+		quietLevel = 1
+	}
+
+	err := runBoard(grid, *words, *xLen, *yLen, quietLevel, *random)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+// runBoard loops getting grid data and finding solutions for that grid.
+func runBoard(grid, wordsFile string, xlen, ylen, quietLevel int, random bool) error {
+	sol, err := solver.New(xlen, ylen, wordsFile)
+	if err != nil {
+		return err
+	}
+	if random {
+		grid = randomGrid(sol.BoardSize())
+	}
+	ever := true
 	boardSize := sol.BoardSize()
-
-	var grid string
-	var c rune
-	for {
-		if bench {
-			sbgrid := make([]rune, 0, boardSize)
-			for i := 0; i < boardSize; i++ {
-				if c == 26 {
-					c = 0
-				}
-				sbgrid = append(sbgrid, 'a'+c)
-				c++
-			}
-			grid = string(sbgrid)
-		} else {
-			grid = readGridFromUser(boardSize)
-		}
-
+	for ever {
 		if grid == "" {
-			break
+			grid, err = readGridFromUser(boardSize)
+			if err != nil {
+				return err
+			}
+			if grid == "" {
+				break
+			}
+		} else {
+			ever = false
 		}
 
 		start := time.Now()
 		words, err := sol.Solve(grid)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 		elapsed := time.Since(start)
 
@@ -91,11 +92,25 @@ func runBoard(wordsFile string, xlen, ylen, quietLevel int, bench bool) {
 			}
 			showWords(words)
 		}
-
-		if bench {
-			time.Sleep(time.Second)
-		}
+		grid = ""
 	}
+	return nil
+}
+
+var rnd *rand.Rand
+
+func randomGrid(size int) string {
+	if rnd == nil {
+		rnd = rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
+	}
+
+	const a = 97
+	grid := make([]byte, size)
+	for i := 0; i < size; i++ {
+		n := rnd.Intn(25)
+		grid[i] = byte(a + n)
+	}
+	return string(grid)
 }
 
 // showWords prints words in four columns.
@@ -112,20 +127,22 @@ func showWords(words []string) {
 }
 
 // readGridFromUser reads input from user, rejecting invalid characters.
-func readGridFromUser(boardSize int) string {
+func readGridFromUser(boardSize int) (string, error) {
 	consReader := bufio.NewReader(os.Stdin)
-	fmt.Printf("\nEnter %d letters into boggle grid: ", boardSize)
+	fmt.Printf("\nEnter %d letters into boggle grid or * for random: ", boardSize)
 	var grid string
 	var valid bool
 	for {
 		input, err := consReader.ReadString('\n')
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "error reading input")
-			os.Exit(1)
+			return "", errors.New("error reading input")
 		}
 		input = strings.TrimRight(input, "\n")
 		if len(input) == 0 {
-			return ""
+			return "", nil
+		}
+		if len(input) == 1 && strings.HasPrefix(input, "*") {
+			return randomGrid(boardSize), nil
 		}
 		input = strings.ToLower(input)
 		valid = true
@@ -146,37 +163,8 @@ func readGridFromUser(boardSize int) string {
 	}
 
 	if len(grid) > boardSize {
-		grid = grid[0:boardSize]
+		grid = grid[:boardSize]
 	}
 
-	return grid
-}
-
-func main() {
-	var xLen = flag.Int("x", 4, "width (X-length) of board")
-	var yLen = flag.Int("y", 4, "height (Y-length) of board")
-	var bench = flag.Bool("b", false, "run benchmark test")
-	var quiet = flag.Bool("q", false, "do not display grid")
-	var veryQuiet = flag.Bool("qq", false, "do not display grid or solutions")
-	var words = flag.String("words", defaultWords,
-		"file containing valid words, separated by newline")
-	var grid = flag.String("grid", "", "grid letters (must be X*Y length)")
-	flag.Parse()
-
-	fmt.Printf("board size (X=%d Y=%d): %d\n", *xLen, *yLen, *xLen**yLen)
-	fmt.Println("grid:", *grid)
-	fmt.Println("words file:", *words)
-	fmt.Println("bench:", *bench)
-	fmt.Println("quiet:", *quiet)
-	fmt.Println("veryQuiet:", *veryQuiet)
-
-	var quietLevel int
-	if *veryQuiet {
-		quietLevel = 2
-	} else if *quiet {
-		quietLevel = 1
-	}
-
-	runBoard(*words, *xLen, *yLen, quietLevel, *bench)
-
+	return grid, nil
 }

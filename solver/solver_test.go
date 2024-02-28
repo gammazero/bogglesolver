@@ -5,9 +5,7 @@ import (
 	"testing"
 )
 
-const (
-	wordsFile = "../boggle_dict.txt.gz"
-)
+const wordsFile = "boggle_dict.txt.gz"
 
 func TestLoadWords(t *testing.T) {
 	rt, err := loadWords("_not_here_", 16, 3)
@@ -15,7 +13,18 @@ func TestLoadWords(t *testing.T) {
 		t.Fatal("failed to catch bad file")
 	}
 
-	rt, err = loadWords(wordsFile, 16, 3)
+	// Load from embedded file.
+	rt, err = loadWords("", 16, 3)
+	if rt == nil {
+		t.Fatal("expected trie")
+	}
+	if rt.Len() < 1 {
+		t.Fatal("expected more words")
+	}
+	fmt.Println("Loaded", rt.Len(), "words from embedded dictionary")
+
+	// Load from external file.
+	rt, err = loadWords("", 16, 3)
 	if rt == nil {
 		t.Fatal("expected trie")
 	}
@@ -93,18 +102,18 @@ func TestSolverBadNew(t *testing.T) {
 		t.Fatal("failed to catch bad file")
 	}
 
-	_, err = New(-4, 5, wordsFile)
+	_, err = New(-4, 5, "")
 	if err == nil {
 		t.Fatal("failed to catch negative dimension")
 	}
 
-	_, err = New(4, 0, wordsFile)
+	_, err = New(4, 0, "")
 	if err == nil {
 		t.Fatal("failed to catch zero dimension")
 	}
 }
 
-func TestGridString(t *testing.T) {
+func TestGrid(t *testing.T) {
 	gs := GridString("abcdefghi", 3, 3)
 	expect := "+---+---+---+\n" +
 		"| A | B | C |\n" +
@@ -119,7 +128,7 @@ func TestGridString(t *testing.T) {
 }
 
 func TestSolver(t *testing.T) {
-	s, err := New(4, 5, wordsFile)
+	s, err := New(4, 5, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +165,7 @@ func TestSolver(t *testing.T) {
 	}
 
 	fmt.Printf("Found %d solutions for %dx%d grid:\n", len(words), xlen, ylen)
-	fmt.Println(GridString(grid, xlen, ylen))
+	fmt.Println(s.Grid(grid))
 	if len(words) != 80 {
 		t.Fatal("wrong number of solutions")
 	}
@@ -182,7 +191,7 @@ func genGrid(boardSize int) string {
 func BenchmarkSolver(b *testing.B) {
 	const xlen = 50
 	const ylen = 50
-	s, _ := New(xlen, ylen, wordsFile)
+	s, _ := New(xlen, ylen, "")
 	grid := genGrid(s.BoardSize())
 
 	b.ResetTimer()
@@ -194,7 +203,7 @@ func BenchmarkSolver(b *testing.B) {
 func BenchmarkSolverPrecomp(b *testing.B) {
 	const xlen = 50
 	const ylen = 50
-	s, _ := New(xlen, ylen, wordsFile)
+	s, _ := New(xlen, ylen, "")
 	grid := genGrid(s.BoardSize())
 
 	b.ResetTimer()

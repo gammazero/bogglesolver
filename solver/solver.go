@@ -1,9 +1,9 @@
-// Solver finds all words in X by Y boggle grids.
 package solver
 
 import (
 	"bufio"
 	"compress/gzip"
+	"embed"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +14,11 @@ import (
 	"github.com/gammazero/deque"
 	"github.com/gammazero/radixtree"
 )
+
+const defaultWords = "boggle_dict.txt.gz"
+
+//go:embed boggle_dict.txt.gz
+var dictFile embed.FS
 
 var adj = make([]int, 0, 8)
 
@@ -26,9 +31,8 @@ type qNode struct {
 
 // Solver implements the algorithm to find words in the Boggle grid.
 //
-// Solver uses an external words file as a dictionary of acceptable boggle
-// words.  When an instance of Solver is created, it sets up an internal
-// dictionary to look up valid boggle answers.  The Solve() method can be used
+// Solver uses an a dictionary to lookup acceptable boggle words as all paths
+// through a boggle grid are followed. The Solve() method can be used
 // repeatedly to generate solutions for different boggle grids.
 type Solver struct {
 	cols int
@@ -38,13 +42,13 @@ type Solver struct {
 
 // New creates and initializes a Solver instance.
 //
-// This creates the internal trie for fast word lookup letter-by-letter.  Words
+// This creates the internal trie for fast word lookup letter-by-letter. Words
 // that begin with capital letters and words that are not within the specified
 // length limits are filtered out.
 //
-// NewSolver takes the board dimensions xlen and ylen, a file (optionally gz
-// compressed) and flag specifying whether or not to use a pre-calculated
-// adjacency matrix (uses more space to save some time).
+// New takes the board dimensions xlen and ylen, a an optional file which can
+// be gz compressed. If no file is specified, then the embedded dictionary is
+// used.
 //
 // The maximum word length is the size of the board, and the minimum word
 // length is 3 letters.
@@ -83,8 +87,8 @@ func (s Solver) WordCount() int {
 // Solve generates all solutions for the given Boggle grid.
 //
 // The grid argument is a string of X*Y characters, representing the letters in
-// a Boggle grid, from top left to bottom right.  This method returns a slice
-// of the words that were found in the grid.
+// a Boggle grid, from top left to bottom right. This method returns a slice of
+// the words that were found in the grid.
 func (s Solver) Solve(grid string) ([]string, error) {
 	if s.rt == nil {
 		return nil, errors.New("failed to read words file")
@@ -151,13 +155,15 @@ func (s Solver) Solve(grid string) ([]string, error) {
 	return uniqueSortedWords(words), nil
 }
 
-// Gridreturns a printable string version of a X by Y boggle grid.
+// Grid returns a printable string version of a X by Y boggle grid.
 //
 // The grid is given as a string of X*Y characters representing the letters in
 // a boggle grid, from top left to bottom right.
 func (s Solver) Grid(grid string) string {
-	cols := s.cols
-	rows := s.rows
+	return GridString(grid, s.cols, s.rows)
+}
+
+func GridString(grid string, cols, rows int) string {
 	if len(grid) != cols*rows {
 		panic("number of letters in grid must equal cols * rows")
 	}
@@ -191,30 +197,42 @@ func (s Solver) Grid(grid string) string {
 	return strings.Join(append(gridLines, ""), hline)
 }
 
-// loadWords reads a file of words and creates a trie containing them.
+// loadWords reads a file of words and creates a trie containing them. If no
+// file name is specified then the embedded dictionary is loaded.
 func loadWords(wordsFile string, maxLen, minLen int) (*radixtree.Tree, error) {
-	f, err := os.Open(wordsFile)
-	if err != nil {
-		return nil, fmt.Errorf("solver: error opening words file: %s", err)
-	}
-	defer f.Close()
-
 	var rdr io.Reader
-	if strings.HasSuffix(wordsFile, ".gz") {
-		rdr, err = gzip.NewReader(f)
+	var gz bool
+	if wordsFile == "" {
+		f, err := dictFile.Open(defaultWords)
+		if err != nil {
+			return nil, fmt.Errorf("solver: error opening words file: %s", err)
+		}
+		defer f.Close()
+		rdr = f
+		gz = true
+	} else {
+		f, err := os.Open(wordsFile)
+		if err != nil {
+			return nil, fmt.Errorf("solver: error opening words file: %s", err)
+		}
+		defer f.Close()
+		rdr = f
+		gz = strings.HasSuffix(wordsFile, ".gz")
+	}
+	if gz {
+		var err error
+		rdr, err = gzip.NewReader(rdr)
 		if err != nil {
 			return nil, fmt.Errorf("solver: error unzipping words file: %s", err)
 		}
-	} else {
-		rdr = f
 	}
+
 	scanner := bufio.NewScanner(rdr)
 	tree := radixtree.New()
-	var word string
 
 	// Scan through line-dilimited words.
 	for scanner.Scan() {
-		word = scanner.Text()
+		word := scanner.Text()
 		// Skip words that are too long or too short.
 		if len(word) > maxLen || len(word) < minLen {
 			continue
@@ -261,7 +279,7 @@ func uniqueSortedWords(words []string) []string {
 // calculateAdjacency calculates squares adjacent to the one given.
 //
 // Adjacent squares, up to eight, are calculated for the square specified by
-// the x and y coordinates, and are written to the given slice.
+// the x and y coordinates and are written to the given slice.
 func calculateAdjacency(xlim, ylim, sq int) []int {
 	// Current cell index = y * xlim + x
 	y := sq / xlim
