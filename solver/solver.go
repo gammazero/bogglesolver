@@ -107,7 +107,9 @@ func (s Solver) Solve(grid string) ([]string, error) {
 		seen := make([]int, 1, 8)
 		seen[0] = initSq
 		stepper := s.rt.NewStepper()
-		stepper.Next(board[initSq])
+		if !stepper.Next(board[initSq]) {
+			continue // no words starting with this letter
+		}
 		q.PushBack(qNode{
 			parentSquare: initSq,
 			parentTrie:   stepper,
