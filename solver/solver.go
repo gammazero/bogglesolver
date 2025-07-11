@@ -25,7 +25,7 @@ var adj = make([]int, 0, 8)
 // qNode is a element of the queue constructed while searching word paths.
 type qNode struct {
 	parentSquare int
-	parentTrie   *radixtree.Stepper
+	parentTrie   *radixtree.Stepper[struct{}]
 	seen         []int
 }
 
@@ -37,7 +37,7 @@ type qNode struct {
 type Solver struct {
 	cols int
 	rows int
-	rt   *radixtree.Tree
+	rt   *radixtree.Tree[struct{}]
 }
 
 // New creates and initializes a Solver instance.
@@ -102,7 +102,9 @@ func (s Solver) Solve(grid string) ([]string, error) {
 
 	board := strings.ToLower(grid)
 	words := make([]string, 0, 256)
-	q := deque.New[qNode](s.BoardSize(), s.BoardSize())
+	var q deque.Deque[qNode]
+	q.SetBaseCap(s.BoardSize())
+	q.Grow(s.BoardSize())
 	for initSq := 0; initSq < len(board); initSq++ {
 		seen := make([]int, 1, 8)
 		seen[0] = initSq
@@ -201,7 +203,7 @@ func GridString(grid string, cols, rows int) string {
 
 // loadWords reads a file of words and creates a trie containing them. If no
 // file name is specified then the embedded words list is loaded.
-func loadWords(filePath string, maxLen, minLen int) (*radixtree.Tree, error) {
+func loadWords(filePath string, maxLen, minLen int) (*radixtree.Tree[struct{}], error) {
 	var rdr io.Reader
 	var gz bool
 	if filePath == "" {
@@ -230,7 +232,7 @@ func loadWords(filePath string, maxLen, minLen int) (*radixtree.Tree, error) {
 	}
 
 	scanner := bufio.NewScanner(rdr)
-	tree := radixtree.New()
+	tree := radixtree.New[struct{}]()
 
 	// Scan through line-dilimited words.
 	for scanner.Scan() {
@@ -252,7 +254,7 @@ func loadWords(filePath string, maxLen, minLen int) (*radixtree.Tree, error) {
 			word = "q" + word[2:]
 		}
 
-		tree.Put(word, nil)
+		tree.Put(word, struct{}{})
 	}
 
 	if err := scanner.Err(); err != nil {
