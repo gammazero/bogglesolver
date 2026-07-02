@@ -100,7 +100,7 @@ func randomGrid(size int) string {
 
 	const a = 97
 	grid := make([]byte, size)
-	for i := 0; i < size; i++ {
+	for i := range size {
 		n := rnd.Intn(25)
 		grid[i] = byte(a + n)
 	}
