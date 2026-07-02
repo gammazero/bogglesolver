@@ -176,7 +176,7 @@ func GridString(grid string, cols, rows int) string {
 
 	line := make([]string, 0, cols+2)
 	line = append(line, "")
-	for i := 0; i < cols; i++ {
+	for range cols {
 		line = append(line, "---")
 	}
 	line = append(line, "\n")
@@ -185,10 +185,10 @@ func GridString(grid string, cols, rows int) string {
 	gridLines := make([]string, 0, 2*rows+1)
 	gridLines = append(gridLines, "")
 	var yi int
-	for y := 0; y < rows; y++ {
+	for y := range rows {
 		yi = y * cols
 		var cell byte
-		for x := 0; x < cols; x++ {
+		for x := range cols {
 			cell = gridChars[yi+x]
 			if cell == 'Q' {
 				line[1+x] = " Qu"

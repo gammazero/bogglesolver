@@ -178,7 +178,7 @@ func TestSolver(t *testing.T) {
 func genGrid(boardSize int) string {
 	var c rune
 	sbgrid := make([]rune, 0, boardSize)
-	for i := 0; i < boardSize; i++ {
+	for range boardSize {
 		if c == 26 {
 			c = 0
 		}
