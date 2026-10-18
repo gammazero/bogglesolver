@@ -1,4 +1,4 @@
-github.com/gammazero/deque v1.2.1 h1:9fnQVFCCZ9/NOc7ccTNqzoKd1tCWOqeI05/lPqFPMGQ=
-github.com/gammazero/deque v1.2.1/go.mod h1:5nSFkzVm+afG9+gy0VIowlqVAW4N8zNcMne+CMQVD2g=
-github.com/gammazero/radixtree v0.4.1 h1:S7TCy80m2qkszdR7y5FWnhpcGUlvP3IU83Ej02zy3RA=
-github.com/gammazero/radixtree v0.4.1/go.mod h1:ASdWnk7E8ZsLUjJeJAb4H3YZ0lzlWMGhXGgo8Hw7PCI=
+github.com/gammazero/deque v1.2.2 h1:zD+4g/JzU5MdHWiPzMeG7OeFW5plbhYKqHfSNDnQ3E8=
+github.com/gammazero/deque v1.2.2/go.mod h1:b0Hd32YGkBkCvq+lAX5i2bKhsBc9AJNZvv4vqNqsvJc=
+github.com/gammazero/radixtree v0.5.0 h1:KlNe4kPF9iJ6jTwvA4iX7S2GAESI91I+0Qtulsvt524=
+github.com/gammazero/radixtree v0.5.0/go.mod h1:nVkCUyRn0MM4/Wxwbxs3TOI7I8glw862BnDOIS5tZYw=

@@ -143,8 +143,7 @@ func (s Solver) Solve(grid string) ([]string, error) {
 					parentTrie:   curNode,
 					seen:         newSeen,
 				})
-				if item := curNode.Item(); item != nil {
-					key := item.Key()
+				if key, _, ok := curNode.Item(); ok {
 					if key[0] == 'q' {
 						// Rehydrate q-words with 'u'.
 						words = append(words, "qu"+key[1:])
